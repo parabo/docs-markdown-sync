@@ -3,9 +3,10 @@
  * Google Docs 문서를 표준 마크다운(.md) 파일로 변환하여 동일한 Google Drive 폴더에 동기화합니다.
  * 
  * [주요 특징]
+ * - 다국어(한국어 / English) 인터페이스 실시간 토글 지원 (UserProperties 보존)
  * - Google Workspace Marketplace 검수 정책 준수: 시간 기반 트리거 1시간 주기(everyHours(1)) 적용
  * - CardService 기반 고반응성 사이드바 UX: ActionResponseBuilder, setNotification, updateCard를 통한 실시간 피드백
- * - Drive API 및 최소 필요 권한(https://www.googleapis.com/auth/drive)을 통한 부모 폴더 자동 탐색 및 .md 파일 갱신/생성
+ * - Drive API 및 권한(https://www.googleapis.com/auth/drive)을 통한 부모 폴더 자동 탐색 및 .md 파일 갱신/생성
  * - LockService 기반 동시 실행 충돌 방지
  * - 정밀 마크다운 변환 엔진: 헤딩, 서식 공백 분리, 중첩 목록, GFM 표 완벽 지원
  */
@@ -20,8 +21,114 @@ const CONFIG = {
   PROP_TARGET_DOC_ID: 'SYNC_TARGET_DOC_ID',
   PROP_AUTO_SYNC_ACTIVE: 'AUTO_SYNC_ACTIVE',
   PROP_LAST_SYNC_TIME: 'LAST_SYNC_TIME',
-  PROP_LAST_SYNC_FILE: 'LAST_SYNC_FILE'
+  PROP_LAST_SYNC_FILE: 'LAST_SYNC_FILE',
+  PROP_USER_LOCALE: 'UI_LOCALE' // 'ko' 또는 'en'
 };
+
+// ============================================================================
+// 다국어(i18n) 리소스 딕셔너리
+// ============================================================================
+
+const I18N = {
+  ko: {
+    cardTitle: 'Markdown 자동 동기화',
+    cardSubtitle: 'Google Docs to .md Sync',
+    toggleBtnText: '🌐 Switch to English',
+    sectionSyncNow: '빠른 동기화',
+    btnSyncNow: '⚡ 지금 즉시 동기화 (Sync Now)',
+    descSyncNow: '편집한 내용을 현재 문서와 <b>동일한 Drive 폴더</b>에 <code>[문서명].md</code> 파일로 즉시 갱신/생성합니다.',
+    sectionStatus: '동기화 현황',
+    lblTargetDoc: '대상 문서',
+    lblAutoScheduler: '자동 스케줄러 (1시간 주기)',
+    statusOn: '🟢 활성화됨 (ON)',
+    statusOff: '⚪ 비활성화됨 (OFF)',
+    lblLastSyncTime: '최근 동기화 시각',
+    noSyncHistory: '동기화 이력 없음',
+    lblSyncFile: '동기화된 파일명',
+    fileNotCreated: '(미생성)',
+    sectionScheduler: '자동 동기화 설정 (1시간 스케줄러)',
+    btnDisableScheduler: '자동 동기화 끄기 (OFF)',
+    descSchedulerOn: '현재 1시간마다 백그라운드에서 마크다운 파일이 자동 갱신됩니다.',
+    btnEnableScheduler: '자동 동기화 켜기 (1시간 주기)',
+    descSchedulerOff: '구글 부가기능 정책에 따라 백그라운드 자동 동기화는 <b>1시간 주기</b>로 실행됩니다.',
+    sectionGuide: '지원 마크다운 문법',
+    guideContent: '• <b>제목</b>: Title, Subtitle, Heading 1~6<br>' +
+                  '• <b>인라인 서식</b>: 볼드, 이탤릭, 취소선, 인라인 코드, 링크<br>' +
+                  '• <b>목록</b>: 글머리 기호 및 번호 목록 (들여쓰기 계층 지원)<br>' +
+                  '• <b>표</b>: GFM 테이블 (셀 내 줄바꿈 & 파이프 이스케이프)<br>' +
+                  '• <b>구분선</b>: 수평선(---) 지원',
+    toastSyncSuccess: (name, time) => `✅ 동기화 완료: '${name}' (${time})`,
+    toastSyncFail: (msg) => `❌ 동기화 실패: ${msg}`,
+    toastNoDoc: '❌ 활성화된 구글 문서를 찾을 수 없습니다.',
+    toastSchedulerEnabled: '🟢 자동 동기화(1시간 주기)가 활성화되었습니다.',
+    toastSchedulerDisabled: '⚪ 자동 동기화 스케줄러가 해제되었습니다.',
+    toastLangSwitched: '인터페이스 언어가 한국어로 설정되었습니다.'
+  },
+  en: {
+    cardTitle: 'Markdown Auto Sync',
+    cardSubtitle: 'Google Docs to .md Sync',
+    toggleBtnText: '🌐 한국어로 전환',
+    sectionSyncNow: 'Quick Sync',
+    btnSyncNow: '⚡ Sync Now (.md)',
+    descSyncNow: 'Instantly sync current content to a <code>[DocTitle].md</code> file in the <b>same Google Drive folder</b>.',
+    sectionStatus: 'Sync Status',
+    lblTargetDoc: 'Target Document',
+    lblAutoScheduler: 'Auto Scheduler (Hourly)',
+    statusOn: '🟢 Active (ON)',
+    statusOff: '⚪ Inactive (OFF)',
+    lblLastSyncTime: 'Last Synced At',
+    noSyncHistory: 'No sync history',
+    lblSyncFile: 'Synced File Name',
+    fileNotCreated: '(Not created yet)',
+    sectionScheduler: 'Auto Sync Settings (1-Hour Scheduler)',
+    btnDisableScheduler: 'Turn Off Auto Sync (OFF)',
+    descSchedulerOn: 'Content is automatically synced in the background every hour.',
+    btnEnableScheduler: 'Turn On Auto Sync (Hourly)',
+    descSchedulerOff: 'Per Google Add-on policy, background auto-sync runs on an <b>hourly basis</b>.',
+    sectionGuide: 'Supported Markdown Syntax',
+    guideContent: '• <b>Headings</b>: Title, Subtitle, Heading 1~6<br>' +
+                  '• <b>Inline Formatting</b>: Bold, Italic, Strikethrough, Code, Links<br>' +
+                  '• <b>Lists</b>: Bulleted & Numbered lists with nested indentation<br>' +
+                  '• <b>Tables</b>: GFM Tables (line breaks as &lt;br&gt;, escaped pipes)<br>' +
+                  '• <b>Horizontal Rule</b>: ---',
+    toastSyncSuccess: (name, time) => `✅ Sync Complete: '${name}' (${time})`,
+    toastSyncFail: (msg) => `❌ Sync Failed: ${msg}`,
+    toastNoDoc: '❌ Active Google Document not found.',
+    toastSchedulerEnabled: '🟢 Hourly auto-sync scheduler activated.',
+    toastSchedulerDisabled: '⚪ Auto-sync scheduler disabled.',
+    toastLangSwitched: 'Interface language set to English.'
+  }
+};
+
+/**
+ * 사용자의 설정 언어('ko' 또는 'en')를 가져옵니다. 기본값은 한국어('ko')입니다.
+ * @return {string}
+ * @private
+ */
+function getUserLocale_() {
+  const userProps = PropertiesService.getUserProperties();
+  const saved = userProps.getProperty(CONFIG.PROP_USER_LOCALE);
+  if (saved && (saved === 'ko' || saved === 'en')) {
+    return saved;
+  }
+  // 기본 언어 감지: 구글 세션 언어가 한국어면 'ko', 아니면 계정 기본값에 맞춰 유연하게 설정 (기본 ko)
+  try {
+    const locale = Session.getActiveUserLocale();
+    if (locale && locale.toLowerCase().startsWith('en')) {
+      return 'en';
+    }
+  } catch (e) {}
+  return 'ko';
+}
+
+/**
+ * 사용자의 설정 언어를 저장합니다.
+ * @param {string} locale
+ * @private
+ */
+function setUserLocale_(locale) {
+  PropertiesService.getUserProperties().setProperty(CONFIG.PROP_USER_LOCALE, locale);
+}
 
 // ============================================================================
 // Google Workspace Add-on 라이프사이클 및 사이드바 카드 렌더링
@@ -42,14 +149,16 @@ function onDocsHomepage(e) {
  */
 function onOpen(e) {
   try {
+    const lang = getUserLocale_();
+    const isEn = lang === 'en';
     const ui = DocumentApp.getUi();
-    const menu = ui.createAddonMenu ? ui.createAddonMenu() : ui.createMenu('Markdown 동기화');
+    const menu = ui.createAddonMenu ? ui.createAddonMenu() : ui.createMenu(isEn ? 'Markdown Sync' : 'Markdown 동기화');
 
     menu
-      .addItem('지금 즉시 동기화', 'syncActiveDocFromMenu')
+      .addItem(isEn ? 'Sync Now' : '지금 즉시 동기화', 'syncActiveDocFromMenu')
       .addSeparator()
-      .addItem('자동 동기화 켜기 (1시간 주기)', 'setupTriggerFromMenu')
-      .addItem('자동 동기화 끄기', 'stopTriggerFromMenu')
+      .addItem(isEn ? 'Enable Auto Sync (Hourly)' : '자동 동기화 켜기 (1시간 주기)', 'setupTriggerFromMenu')
+      .addItem(isEn ? 'Disable Auto Sync' : '자동 동기화 끄기', 'stopTriggerFromMenu')
       .addToUi();
   } catch (error) {
     console.warn('[onOpen] 메뉴 등록 건너뜀 (사이드바 전용 모드이거나 UI 미지원 컨텍스트):', error);
@@ -65,79 +174,97 @@ function onInstall(e) {
 }
 
 /**
- * 사이드바 메인 카드를 동적으로 구성하는 팩토리 함수
+ * 사이드바 메인 카드를 동적으로 구성하는 팩토리 함수 (다국어 지원)
  * @return {CardService.Card} 구성된 카드 객체
  * @private
  */
 function buildMainCard_() {
+  const lang = getUserLocale_();
+  const t = I18N[lang] || I18N.ko;
+
   const isAutoSync = checkIsAutoSyncActive_();
   const docProps = PropertiesService.getDocumentProperties();
-  const lastSyncTime = docProps.getProperty(CONFIG.PROP_LAST_SYNC_TIME) || '동기화 이력 없음';
-  const lastSyncFile = docProps.getProperty(CONFIG.PROP_LAST_SYNC_FILE) || '(미생성)';
+  const lastSyncTime = docProps.getProperty(CONFIG.PROP_LAST_SYNC_TIME) || t.noSyncHistory;
+  const lastSyncFile = docProps.getProperty(CONFIG.PROP_LAST_SYNC_FILE) || t.fileNotCreated;
 
-  let currentDocTitle = '현재 문서';
+  let currentDocTitle = lang === 'en' ? 'Current Document' : '현재 문서';
   try {
     const doc = DocumentApp.getActiveDocument();
     if (doc) {
       currentDocTitle = doc.getName();
     }
-  } catch (err) {
-    // 백그라운드 등 getActiveDocument 접근 불가 시 기본값 유지
-  }
+  } catch (err) {}
 
   const card = CardService.newCardBuilder();
   card.setHeader(
     CardService.newCardHeader()
-      .setTitle('Markdown 자동 동기화')
-      .setSubtitle('Google Docs to .md Sync')
+      .setTitle(t.cardTitle)
+      .setSubtitle(t.cardSubtitle)
       .setImageStyle(CardService.ImageStyle.SQUARE)
   );
 
-  // --------------------------------------------------------------------------
-  // 섹션 1: 최우선 빠른 실행 [지금 즉시 동기화]
-  // --------------------------------------------------------------------------
-  const sectionSyncNow = CardService.newCardSection()
-    .setHeader('빠른 동기화');
-
-  const syncNowAction = CardService.newAction().setFunctionName('handleManualSyncAction');
-  const syncNowButton = CardService.newTextButton()
-    .setText('⚡ 지금 즉시 동기화 (Sync Now)')
-    .setOnClickAction(syncNowAction)
-    .setTextButtonStyle(CardService.TextButtonStyle.FILLED);
-
-  sectionSyncNow.addWidget(syncNowButton);
-  sectionSyncNow.addWidget(
-    CardService.newTextParagraph()
-      .setText('편집한 내용을 현재 문서와 <b>동일한 Drive 폴더</b>에 <code>[문서명].md</code> 파일로 즉시 갱신/생성합니다.')
+  // 상단 점 3개 메뉴(CardAction)에도 언어 전환 옵션 추가
+  const toggleAction = CardService.newAction().setFunctionName('handleToggleLanguageAction');
+  card.addCardAction(
+    CardService.newCardAction()
+      .setText(t.toggleBtnText)
+      .setOnClickAction(toggleAction)
   );
 
   // --------------------------------------------------------------------------
-  // 섹션 2: 동기화 상태 및 정보
+  // 섹션 1: 상단 언어 스위처 바 & 빠른 동기화
+  // --------------------------------------------------------------------------
+  const sectionSyncNow = CardService.newCardSection()
+    .setHeader(t.sectionSyncNow);
+
+  // 언어 전환 토글 버튼 (눈에 띄는 상단 위치)
+  const langSwitchButton = CardService.newTextButton()
+    .setText(t.toggleBtnText)
+    .setOnClickAction(toggleAction)
+    .setTextButtonStyle(CardService.TextButtonStyle.TEXT);
+
+  const syncNowAction = CardService.newAction().setFunctionName('handleManualSyncAction');
+  const syncNowButton = CardService.newTextButton()
+    .setText(t.btnSyncNow)
+    .setOnClickAction(syncNowAction)
+    .setTextButtonStyle(CardService.TextButtonStyle.FILLED);
+
+  // 상단 언어 전환 버튼 배치
+  sectionSyncNow.addWidget(
+    CardService.newButtonSet().addButton(langSwitchButton)
+  );
+  sectionSyncNow.addWidget(syncNowButton);
+  sectionSyncNow.addWidget(
+    CardService.newTextParagraph().setText(t.descSyncNow)
+  );
+
+  // --------------------------------------------------------------------------
+  // 섹션 2: 동기화 현황
   // --------------------------------------------------------------------------
   const sectionStatus = CardService.newCardSection()
-    .setHeader('동기화 현황');
+    .setHeader(t.sectionStatus);
 
   sectionStatus.addWidget(
     CardService.newKeyValue()
-      .setTopLabel('대상 문서')
+      .setTopLabel(t.lblTargetDoc)
       .setContent(currentDocTitle)
   );
 
   sectionStatus.addWidget(
     CardService.newKeyValue()
-      .setTopLabel('자동 스케줄러 (1시간 주기)')
-      .setContent(isAutoSync ? '🟢 활성화됨 (ON)' : '⚪ 비활성화됨 (OFF)')
+      .setTopLabel(t.lblAutoScheduler)
+      .setContent(isAutoSync ? t.statusOn : t.statusOff)
   );
 
   sectionStatus.addWidget(
     CardService.newKeyValue()
-      .setTopLabel('최근 동기화 시각')
+      .setTopLabel(t.lblLastSyncTime)
       .setContent(lastSyncTime)
   );
 
   sectionStatus.addWidget(
     CardService.newKeyValue()
-      .setTopLabel('동기화된 파일명')
+      .setTopLabel(t.lblSyncFile)
       .setContent(lastSyncFile)
   );
 
@@ -145,30 +272,28 @@ function buildMainCard_() {
   // 섹션 3: 1시간 자동 스케줄러 설정 (Marketplace 정책 준수)
   // --------------------------------------------------------------------------
   const sectionScheduler = CardService.newCardSection()
-    .setHeader('자동 동기화 설정 (1시간 스케줄러)');
+    .setHeader(t.sectionScheduler);
 
   if (isAutoSync) {
     const disableAction = CardService.newAction().setFunctionName('handleDisableAutoSyncAction');
     const disableButton = CardService.newTextButton()
-      .setText('자동 동기화 끄기 (OFF)')
+      .setText(t.btnDisableScheduler)
       .setOnClickAction(disableAction);
 
     sectionScheduler.addWidget(disableButton);
     sectionScheduler.addWidget(
-      CardService.newTextParagraph()
-        .setText('현재 1시간마다 백그라운드에서 마크다운 파일이 자동 갱신됩니다.')
+      CardService.newTextParagraph().setText(t.descSchedulerOn)
     );
   } else {
     const enableAction = CardService.newAction().setFunctionName('handleEnableAutoSyncAction');
     const enableButton = CardService.newTextButton()
-      .setText('자동 동기화 켜기 (1시간 주기)')
+      .setText(t.btnEnableScheduler)
       .setOnClickAction(enableAction)
       .setTextButtonStyle(CardService.TextButtonStyle.FILLED);
 
     sectionScheduler.addWidget(enableButton);
     sectionScheduler.addWidget(
-      CardService.newTextParagraph()
-        .setText('구글 부가기능 정책에 따라 백그라운드 자동 동기화는 <b>1시간 주기</b>로 실행됩니다.')
+      CardService.newTextParagraph().setText(t.descSchedulerOff)
     );
   }
 
@@ -176,17 +301,11 @@ function buildMainCard_() {
   // 섹션 4: 변환 지원 안내
   // --------------------------------------------------------------------------
   const sectionGuide = CardService.newCardSection()
-    .setHeader('지원 마크다운 문법')
+    .setHeader(t.sectionGuide)
     .setCollapsible(true);
 
   sectionGuide.addWidget(
-    CardService.newTextParagraph().setText(
-      '• <b>제목</b>: Title, Subtitle, Heading 1~6<br>' +
-      '• <b>인라인 서식</b>: 볼드, 이탤릭, 취소선, 인라인 코드, 링크<br>' +
-      '• <b>목록</b>: 글머리 기호 및 번호 목록 (들여쓰기 계층 지원)<br>' +
-      '• <b>표</b>: GFM 테이블 (셀 내 줄바꿈 & 파이프 이스케이프)<br>' +
-      '• <b>구분선</b>: 수평선(---) 지원'
-    )
+    CardService.newTextParagraph().setText(t.guideContent)
   );
 
   card.addSection(sectionSyncNow);
@@ -202,11 +321,31 @@ function buildMainCard_() {
 // ============================================================================
 
 /**
+ * [🌐 한국어 / English] 언어 전환 버튼 클릭 핸들러
+ * @param {Object} e 이벤트 객체
+ * @return {CardService.ActionResponse}
+ */
+function handleToggleLanguageAction(e) {
+  const currentLang = getUserLocale_();
+  const nextLang = (currentLang === 'ko') ? 'en' : 'ko';
+  setUserLocale_(nextLang);
+
+  const t = I18N[nextLang];
+  return CardService.newActionResponseBuilder()
+    .setNotification(CardService.newNotification().setText(t.toastLangSwitched))
+    .setNavigation(CardService.newNavigation().updateCard(buildMainCard_()))
+    .build();
+}
+
+/**
  * 사이드바 [지금 즉시 동기화] 버튼 클릭 핸들러
  * @param {Object} e 이벤트 객체
  * @return {CardService.ActionResponse}
  */
 function handleManualSyncAction(e) {
+  const lang = getUserLocale_();
+  const t = I18N[lang] || I18N.ko;
+
   let doc = null;
   try {
     doc = DocumentApp.getActiveDocument();
@@ -216,18 +355,14 @@ function handleManualSyncAction(e) {
 
   if (!doc) {
     return CardService.newActionResponseBuilder()
-      .setNotification(CardService.newNotification().setText('❌ 활성화된 구글 문서를 찾을 수 없습니다.'))
+      .setNotification(CardService.newNotification().setText(t.toastNoDoc))
       .build();
   }
 
   const result = executeSync_(doc, true);
-  let notificationText = '';
-
-  if (result.success) {
-    notificationText = `✅ 동기화 완료: '${result.fileName}' (${result.syncTime})`;
-  } else {
-    notificationText = `❌ 동기화 실패: ${result.message}`;
-  }
+  const notificationText = result.success 
+    ? t.toastSyncSuccess(result.fileName, result.syncTime)
+    : t.toastSyncFail(result.message);
 
   // 최신 동기화 시각 및 파일명이 갱신된 메인 카드로 즉시 리로드
   return CardService.newActionResponseBuilder()
@@ -242,6 +377,9 @@ function handleManualSyncAction(e) {
  * @return {CardService.ActionResponse}
  */
 function handleEnableAutoSyncAction(e) {
+  const lang = getUserLocale_();
+  const t = I18N[lang] || I18N.ko;
+
   let doc = null;
   try {
     doc = DocumentApp.getActiveDocument();
@@ -251,7 +389,7 @@ function handleEnableAutoSyncAction(e) {
 
   if (!doc) {
     return CardService.newActionResponseBuilder()
-      .setNotification(CardService.newNotification().setText('❌ 문서를 찾을 수 없어 스케줄러를 등록하지 못했습니다.'))
+      .setNotification(CardService.newNotification().setText(t.toastNoDoc))
       .build();
   }
 
@@ -261,7 +399,7 @@ function handleEnableAutoSyncAction(e) {
   executeSync_(doc, false);
 
   return CardService.newActionResponseBuilder()
-    .setNotification(CardService.newNotification().setText('🟢 자동 동기화(1시간 주기)가 활성화되었습니다.'))
+    .setNotification(CardService.newNotification().setText(t.toastSchedulerEnabled))
     .setNavigation(CardService.newNavigation().updateCard(buildMainCard_()))
     .build();
 }
@@ -272,10 +410,13 @@ function handleEnableAutoSyncAction(e) {
  * @return {CardService.ActionResponse}
  */
 function handleDisableAutoSyncAction(e) {
+  const lang = getUserLocale_();
+  const t = I18N[lang] || I18N.ko;
+
   stopSchedulerInternal_();
 
   return CardService.newActionResponseBuilder()
-    .setNotification(CardService.newNotification().setText('⚪ 자동 동기화 스케줄러가 해제되었습니다.'))
+    .setNotification(CardService.newNotification().setText(t.toastSchedulerDisabled))
     .setNavigation(CardService.newNavigation().updateCard(buildMainCard_()))
     .build();
 }
@@ -285,14 +426,16 @@ function handleDisableAutoSyncAction(e) {
 // ============================================================================
 
 function syncActiveDocFromMenu() {
+  const lang = getUserLocale_();
+  const t = I18N[lang] || I18N.ko;
   const doc = DocumentApp.getActiveDocument();
   if (!doc) return;
   const result = executeSync_(doc, true);
   try {
     if (result.success) {
-      doc.getUi().toast(`'${result.fileName}' 동기화 완료!`, 'Markdown 동기화', 4);
+      doc.getUi().toast(`'${result.fileName}' ${lang === 'en' ? 'sync complete!' : '동기화 완료!'}`, t.cardTitle, 4);
     } else {
-      doc.getUi().alert('동기화 실패', result.message, doc.getUi().ButtonSet.OK);
+      doc.getUi().alert(lang === 'en' ? 'Sync Failed' : '동기화 실패', result.message, doc.getUi().ButtonSet.OK);
     }
   } catch (e) {
     console.log('[syncActiveDocFromMenu]', result);
@@ -300,21 +443,31 @@ function syncActiveDocFromMenu() {
 }
 
 function setupTriggerFromMenu() {
+  const lang = getUserLocale_();
   const doc = DocumentApp.getActiveDocument();
   if (!doc) return;
   setupSchedulerInternal_(doc);
   executeSync_(doc, false);
   try {
-    doc.getUi().toast('자동 동기화가 활성화되었습니다. (1시간 주기)', 'Markdown 동기화', 4);
+    doc.getUi().toast(
+      lang === 'en' ? 'Hourly auto-sync activated.' : '자동 동기화가 활성화되었습니다. (1시간 주기)',
+      lang === 'en' ? 'Markdown Sync' : 'Markdown 동기화',
+      4
+    );
   } catch (e) {}
 }
 
 function stopTriggerFromMenu() {
+  const lang = getUserLocale_();
   stopSchedulerInternal_();
   try {
     const doc = DocumentApp.getActiveDocument();
     if (doc) {
-      doc.getUi().toast('자동 동기화가 해제되었습니다.', 'Markdown 동기화', 4);
+      doc.getUi().toast(
+        lang === 'en' ? 'Auto-sync scheduler disabled.' : '자동 동기화가 해제되었습니다.',
+        lang === 'en' ? 'Markdown Sync' : 'Markdown 동기화',
+        4
+      );
     }
   } catch (e) {}
 }
@@ -441,13 +594,17 @@ function scheduledSync() {
  * @private
  */
 function executeSync_(doc, isManual) {
+  const lang = getUserLocale_();
+
   // LockService 적용 (최대 10초 대기)
   const lock = LockService.getDocumentLock() || LockService.getUserLock();
   if (!lock || !lock.tryLock(10000)) {
     console.warn('[AutoSync] 동시 실행 방지: 다른 동기화 작업이 진행 중입니다.');
     return {
       success: false,
-      message: '다른 동기화 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요.'
+      message: lang === 'en' 
+        ? 'Another sync operation is in progress. Please try again shortly.'
+        : '다른 동기화 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요.'
     };
   }
 
@@ -459,7 +616,7 @@ function executeSync_(doc, isManual) {
     // 1. Google Docs 본문을 마크다운으로 변환
     const markdownContent = convertDocToMarkdown_(doc);
 
-    // 2. DriveApp을 통해 현재 문서의 부모 폴더 탐색 (https://www.googleapis.com/auth/drive 스코프 필수)
+    // 2. DriveApp을 통해 현재 문서의 부모 폴더 탐색 (https://www.googleapis.com/auth/drive 스코프)
     const file = DriveApp.getFileById(docId);
     const parents = file.getParents();
     const parentFolder = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
@@ -709,7 +866,7 @@ function convertContainerTextToMarkdown_(container) {
       result += convertTextElementToMarkdown_(child.asText());
     } else if (type === DocumentApp.ElementType.INLINE_IMAGE) {
       const img = child.asInlineImage();
-      const alt = img.getAltDescription() || img.getAltTitle() || '이미지';
+      const alt = img.getAltDescription() || img.getAltTitle() || 'Image';
       result += `![${alt}]()`;
     } else if (type === DocumentApp.ElementType.HORIZONTAL_RULE) {
       result += '\n---\n';
