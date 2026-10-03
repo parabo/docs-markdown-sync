@@ -14,9 +14,9 @@
 - 본 애플리케이션은 사용자의 정보를 제3자에게 판매, 공유, 양도하지 않으며 타겟 광고에 활용하지 않습니다.
 
 4. Google API 사용자 데이터 정책 준수
-본 애플리케이션의 Google API 정보 사용 및 타 앱으로의 전송은 제한적 사용(Limited Use) 요건을 포함한 [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy)를 엄격히 준수합니다.
+- 본 애플리케이션의 Google API 정보 사용 및 타 앱으로의 전송은 제한적 사용(Limited Use) 요건을 포함한 [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy)를 엄격히 준수합니다.
 
 5. 문의처
-개인정보 보호와 관련된 문의 사항은 아래 연락처로 문의하시기 바랍니다.
+- 개인정보 보호와 관련된 문의 사항은 아래 연락처로 문의하시기 바랍니다.
 - 담당자/개발자: [개발자 이름/닉네임]
 - 이메일: [개발자 이메일]
