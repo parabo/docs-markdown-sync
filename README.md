@@ -1,4 +1,103 @@
-# Google Docs Markdown Auto Sync (Google Workspace Add-on)
+# Markdown Auto Sync (Google Workspace Add-on)
+
+> 🇰🇷 **한국어 안내**: 이 문서의 아래쪽 섹션에 **[한국어 설명](#-한국어-안내-korean-guide)**이 포함되어 있습니다.  
+> 🌐 **Language Notice**: Korean documentation is available in the **[lower section of this document](#-한국어-안내-korean-guide)**.
+
+---
+
+# English Guide
+
+An enterprise-ready **Google Workspace Add-on** for **Google Docs** that automatically converts your documents into standard GitHub Flavored Markdown (`.md`) files and saves or synchronizes them directly in the **exact same Google Drive folder**.
+
+Engineered to strictly comply with Google Workspace Marketplace policies and Google API Limited Use guidelines.
+
+---
+
+## 🚀 Key Features and Architecture
+
+1. **Google Workspace Marketplace Compliance**
+   - **Hourly Background Scheduler (`everyHours(1)`)**: Conforms strictly to Google's Add-on policy forbidding sub-hour (minute-based) time-driven triggers, eliminating review rejection risks.
+   - **Handling Docs Event Limitations**: Because Google Docs does not support real-time `onEdit` triggers, we provide a reliable hybrid architecture: **instant manual sync via sidebar + 1-hour background scheduler**.
+
+2. **Responsive Sidebar UX (`CardService`) & Multi-Language Support**
+   - **Real-time Korean / English Language Toggle**: Switch between languages instantly with the top button (`🌐 Switch to English` / `🌐 한국어로 전환`) or the 3-dots (⋮) menu. Language preferences are permanently saved to your Google account (`UserProperties`).
+   - **Primary Action [⚡ Sync Now (.md)]**: Positioned at the very top of the sidebar for immediate one-click synchronization.
+   - **ActionResponse Feedback**: Returns interactive responses with `setNotification()` for immediate toast popups and `setNavigation(CardService.newNavigation().updateCard(...))` to reload current sync timestamps, filenames, and scheduler statuses.
+
+3. **Safe Drive Parent Folder Traversal & OAuth Stability**
+   - Uses `https://www.googleapis.com/auth/drive` to reliably locate the document's parent folder (`getParents()`) even on existing documents, avoiding runtime `drive.file` permission exceptions.
+   - If `[DocumentTitle].md` exists, its content is updated via `setContent()`; otherwise, it is created anew via `createFile()`.
+
+4. **Concurrency Control (`LockService`)**
+   - Employs a 10-second wait lock (`LockService.getDocumentLock()` / `getUserLock()`) to prevent race conditions and file corruption when manual and background syncs overlap.
+
+5. **Precision Markdown Conversion Engine**
+   - **Headings**: Title, Subtitle, and Heading 1 through 6.
+   - **Inline Formatting & Space Isolation**: Bold (`**text**`), Italic (`*text*`), Strikethrough (`~~text~~`), Monospace/Code (`` `code` ``), and Hyperlinks. Separates leading/trailing whitespaces from formatting markers to prevent broken Markdown parsing.
+   - **Lists**: Bulleted (`- `) and numbered (`1. `) lists with preserved nested indentation (2 spaces per level).
+   - **Tables**: GitHub Flavored Markdown (GFM) tables (`| Header | ... |`) with cell line breaks replaced by `<br>` and pipe (`|`) characters escaped.
+   - **Horizontal Rules**: `---` support.
+
+---
+
+## 📂 Project Structure
+
+```text
+auto_markdown/
+├── Code.gs            # Add-on source code (UI, scheduler, Markdown engine, Drive I/O)
+├── appsscript.json    # Manifest (V8 runtime, OAuth scopes, addOns configuration)
+├── PRIVACY.md         # Privacy Policy for Marketplace submission
+├── TERMS.md           # Terms of Service for Marketplace submission
+└── README.md          # Dual-language documentation & setup guide
+```
+
+---
+
+## 🔐 OAuth Scopes (`appsscript.json`)
+
+| Scope | Purpose |
+| :--- | :--- |
+| `https://www.googleapis.com/auth/documents.currentonly` | Read the text and styles of the active Google Doc. |
+| `https://www.googleapis.com/auth/drive` | Locate the parent folder and create/update `.md` files in the same directory. |
+| `https://www.googleapis.com/auth/script.scriptapp` | Create and manage the 1-hour background sync scheduler. |
+| `https://www.googleapis.com/auth/script.container.ui` | Render the sidebar interface and handle interactive action responses. |
+
+---
+
+## 🛠️ Installation & Testing
+
+### Option 1. Direct Testing in Google Docs (Container-Bound)
+
+1. Open the **Google Docs** document you want to test with.
+2. In the top menu, navigate to **Extensions > Apps Script**.
+3. Click the gear icon (**Project Settings**) on the left and check **"Show 'appsscript.json' manifest file in editor"**.
+4. Paste the contents of [`appsscript.json`](./appsscript.json) into the editor's manifest and save (`Ctrl + S`).
+5. Paste the contents of [`Code.gs`](./Code.gs) into `Code.gs` and save (`Ctrl + S`).
+6. Refresh the Google Docs page (F5) to access the sidebar and top menu.
+
+### Option 2. Using clasp CLI
+
+```bash
+# Push files to Google Apps Script
+clasp push
+```
+
+---
+
+## 📝 User Guide
+
+1. **Instant Sync**:
+   - Edit your Google Doc and click **[⚡ Sync Now (.md)]** at the top of the sidebar.
+   - A `.md` file is instantly generated or updated in the same Google Drive folder.
+2. **Enable Background Sync**:
+   - Click **[Turn On Auto Sync (Hourly)]** to register an automated background sync that runs every hour.
+3. **Disable Background Sync**:
+   - Click **[Turn Off Auto Sync (OFF)]** to remove all scheduled background triggers.
+
+---
+---
+
+# 🇰🇷 한국어 안내 (Korean Guide)
 
 Google Docs(구글 문서)의 내용을 표준 마크다운(`.md`) 파일로 자동 변환하여, 해당 문서가 위치한 Google Drive의 **동일한 폴더**에 자동으로 생성 및 동기화해 주는 Google Workspace Add-on 프로젝트입니다.
 
@@ -41,7 +140,9 @@ Google Workspace Marketplace(마켓플레이스) 배포 가이드라인 및 보�
 auto_markdown/
 ├── Code.gs            # Add-on 전체 소스 코드 (CardService UI, 스케줄러, 변환 엔진, Drive I/O)
 ├── appsscript.json    # 매니페스트 (V8 런타임, OAuth 스코프, addOns.common/docs 선언)
-└── README.md          # 프로젝트 설정 및 사용 가이드
+├── PRIVACY.md         # 마켓플레이스 제출용 개인정보처리방침 (영문)
+├── TERMS.md           # 마켓플레이스 제출용 서비스 이용약관 (영문)
+└── README.md          # 영문 및 한국어 이중 언어 문서
 ```
 
 ---
@@ -64,15 +165,16 @@ auto_markdown/
 1. 동기화할 **Google Docs** 문서를 엽니다.
 2. 상단 메뉴 **[확장 프로그램] > [Apps Script]**를 클릭합니다.
 3. 좌측 톱니바퀴 아이콘(**프로젝트 설정**) $\rightarrow$ **`"appsscript.json" 매니페스트 파일 표시`**를 체크합니다.
-4. [`appsscript.json`](file:///d:/cloud/projects/auto_markdown/appsscript.json) 파일 내용을 열어 붙여넣고 저장(`Ctrl + S`)합니다.
-5. [`Code.gs`](file:///d:/cloud/projects/auto_markdown/Code.gs) 파일 내용을 열어 붙여넣고 저장(`Ctrl + S`)합니다.
+4. [`appsscript.json`](./appsscript.json) 파일 내용을 열어 붙여넣고 저장(`Ctrl + S`)합니다.
+5. [`Code.gs`](./Code.gs) 파일 내용을 열어 붙여넣고 저장(`Ctrl + S`)합니다.
 6. 문서 창을 새로고침(F5)하면 우측 사이드바 패널 또는 상단 **[확장 프로그램] > [Markdown 동기화]** 메뉴가 활성화됩니다.
 
-### 방법 2. Google Workspace Add-on 배포 테스트
+### 방법 2. clasp CLI 사용
 
-1. Apps Script 편집기 우측 상단 **[배포] > [배포 테스트]**를 클릭합니다.
-2. 유형으로 **[Google Workspace 부가기능]**을 선택하고 설치합니다.
-3. Google Docs 문서를 열면 우측 사이드바 아이콘에 **Markdown Auto Sync**가 나타납니다.
+```bash
+# 로컬 코드를 Google Apps Script로 푸시
+clasp push
+```
 
 ---
 

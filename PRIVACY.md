@@ -1,22 +1,83 @@
-# 개인정보처리방침 (Privacy Policy)
+# Privacy Policy for Markdown Auto Sync
 
-본 개인정보처리방침은 [앱 이름(예: Docs to Markdown)] 부가기능(이하 "애플리케이션")이 사용자의 데이터를 취급하는 방식을 규정합니다.
+**Effective Date**: October 4, 2026  
+**Last Updated**: October 4, 2026
 
-1. 데이터 접근 및 사용
-- 본 애플리케이션은 사용자가 요청한 구글 문서를 마크다운(.md) 파일로 변환하여 사용자의 구글 드라이브 내 동일 폴더에 저장하는 기능만을 수행합니다.
-- 변환 처리를 위해 현재 작업 중인 문서의 텍스트 및 서식 정보와 드라이브 파일 생성 권한에 일시적으로 접근합니다.
+This Privacy Policy explains how **Markdown Auto Sync** ("the Application", "we", "us", or "our"), a Google Workspace Add-on, accesses, processes, and protects your information when you use our software.
 
-2. 데이터 저장 및 외부 전송 금지
-- 본 애플리케이션은 사용자의 어떠한 문서 내용, 파일, 개인 식별 정보도 외부 서버나 제3자 데이터베이스로 전송하거나 영구적으로 저장하지 않습니다.
-- 모든 데이터 처리는 사용자의 Google Workspace 및 Google Apps Script 실행 환경 내부에서만 독립적으로 처리됩니다.
+We are committed to respecting your privacy. The Application is designed to operate completely within your personal Google account environment without sending any of your documents or personal data to external servers.
 
-3. 제3자 제공 및 광고
-- 본 애플리케이션은 사용자의 정보를 제3자에게 판매, 공유, 양도하지 않으며 타겟 광고에 활용하지 않습니다.
+---
 
-4. Google API 사용자 데이터 정책 준수
-- 본 애플리케이션의 Google API 정보 사용 및 타 앱으로의 전송은 제한적 사용(Limited Use) 요건을 포함한 [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy)를 엄격히 준수합니다.
+## 1. Information We Access and Process
 
-5. 문의처
-- 개인정보 보호와 관련된 문의 사항은 아래 연락처로 문의하시기 바랍니다.
-- 담당자/개발자: [개발자 이름/닉네임]
-- 이메일: [개발자 이메일]
+Markdown Auto Sync processes only the minimum data necessary to convert your Google Docs into Markdown (`.md`) format:
+
+- **Active Document Content**: The text, headings, inline styling (bold, italic, strikethrough, monospace/code, hyperlinks), lists, and tables of the currently active Google Doc that you choose to sync.
+- **Drive Metadata**: The document's title and its parent folder ID, used solely to create or update the corresponding `[Document Title].md` file in the exact same Google Drive location.
+- **User Interface Preferences**: Language preference (Korean or English) and the timestamp of the most recent sync, saved securely within your Google account's `UserProperties` and `DocumentProperties`.
+
+> **Note**: All conversion operations occur entirely in-memory and in real time during the execution of the script.
+
+---
+
+## 2. Data Storage, Transmission, and Security
+
+- **No External Servers**: Markdown Auto Sync does **not** operate any external backend servers, analytics services, or third-party databases. None of your document contents, file names, or personal data are ever transmitted outside of Google's infrastructure.
+- **Client-Side / In-Account Execution**: All processing is performed strictly within your Google Workspace environment via Google Apps Script and official Google Drive/Docs APIs.
+- **No Permanent Retention**: We do not store or retain your document contents. Once the Markdown file is created or updated in your Google Drive, the in-memory data is immediately discarded.
+
+---
+
+## 3. Third-Party Sharing and Advertising
+
+- **Zero Third-Party Sharing**: We do not sell, rent, trade, or transfer your documents, metadata, or personal information to any third parties.
+- **No Advertising or Profiling**: Your data is never used for personalized advertising, behavioral tracking, user profiling, or training artificial intelligence / machine learning models.
+
+---
+
+## 4. Google API Services User Data Policy Compliance
+
+Markdown Auto Sync's use and transfer to any other app of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the **Limited Use** requirements.
+
+Specifically:
+- We access Google user data only to provide and improve user-facing features (converting documents to Markdown files in the same folder).
+- We never transfer user data to third parties, except as necessary to provide the service directly within Google's own ecosystem.
+- We never use or transfer human-readable user data for serving advertisements.
+- We do not allow humans to read user data unless required by applicable law or with your explicit permission for troubleshooting purposes.
+
+---
+
+## 5. Disclosure of Requested OAuth Scopes
+
+Markdown Auto Sync requests the following permissions strictly to provide its core functionality:
+
+| OAuth Scope | Purpose of Use |
+| :--- | :--- |
+| `https://www.googleapis.com/auth/documents.currentonly` | Read the text and formatting of the currently active Google Doc to convert it into Markdown format. |
+| `https://www.googleapis.com/auth/drive` | Locate the document's parent folder and create or update the `.md` file in the same directory. |
+| `https://www.googleapis.com/auth/script.scriptapp` | Schedule and manage the 1-hour background automatic synchronization trigger requested by the user. |
+| `https://www.googleapis.com/auth/script.container.ui` | Render the sidebar user interface (CardService) and display interactive action responses and notifications. |
+
+---
+
+## 6. Children's Privacy
+
+Our Application does not address anyone under the age of 13. We do not knowingly collect personally identifiable information from children.
+
+---
+
+## 7. Changes to This Privacy Policy
+
+We may update our Privacy Policy from time to time to reflect changes in legal requirements or platform functionality. Any updates will be posted on this page with an updated "Last Updated" date.
+
+---
+
+## 8. Contact Information
+
+If you have any questions, concerns, or requests regarding this Privacy Policy or the security of the Application, please contact:
+
+- **Application Name**: Markdown Auto Sync
+- **Developer / Maintainer**: [Your Name or Nickname]
+- **Email**: [Your Contact Email]
+- **Source Code Repository**: [https://github.com/parabo/docs-markdown-sync](https://github.com/parabo/docs-markdown-sync)
